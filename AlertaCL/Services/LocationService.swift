@@ -4,7 +4,7 @@ import Observation
 
 @Observable
 @MainActor
-final class LocationService: NSObject, CLLocationManagerDelegate {
+final class LocationService: NSObject {
     private let manager = CLLocationManager()
     private(set) var authorization: CLAuthorizationStatus
     private(set) var coordinate: CLLocationCoordinate2D?
@@ -21,16 +21,24 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         manager.requestWhenInUseAuthorization()
         manager.startUpdatingLocation()
     }
+}
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorization = manager.authorizationStatus
-        if authorization == .authorizedWhenInUse || authorization == .authorizedAlways {
-            manager.startUpdatingLocation()
+extension LocationService: @preconcurrency CLLocationManagerDelegate {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            self.authorization = status
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.manager.startUpdatingLocation()
+            }
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        coordinate = locations.last?.coordinate
-        manager.stopUpdatingLocation()
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let coord = locations.last?.coordinate
+        Task { @MainActor in
+            self.coordinate = coord
+            self.manager.stopUpdatingLocation()
+        }
     }
 }
