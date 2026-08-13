@@ -31,7 +31,10 @@ struct Earthquake: Identifiable, Hashable, Sendable {
     }
 
     var relativeTime: String {
-        RelativeDateTimeFormatter.alerta.localizedString(for: time, relativeTo: .now)
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "es_CL")
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: time, relativeTo: .now)
     }
 }
 
@@ -139,13 +142,4 @@ extension Earthquake {
             source: "DEMO"
         )
     }
-}
-
-private extension RelativeDateTimeFormatter {
-    static let alerta: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "es_CL")
-        f.unitsStyle = .short
-        return f
-    }()
 }
