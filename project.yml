@@ -1,0 +1,57 @@
+name: AlertaCL
+options:
+  bundleIdPrefix: cl.alerta
+  deploymentTarget:
+    iOS: "26.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleDisplayName: AlertaCL
+    INFOPLIST_KEY_LSRequiresIPhoneOS: YES
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+    INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "AlertaCL usa tu ubicación para estimar intensidad local y mostrar sismos cercanos."
+    INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "AlertaCL puede avisar sismos cercanos aunque la app esté en segundo plano."
+    INFOPLIST_KEY_UIBackgroundModes: "fetch remote-notification"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+targets:
+  AlertaCL:
+    type: application
+    platform: iOS
+    sources:
+      - path: AlertaCL
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cl.alerta.sismico
+        PRODUCT_NAME: AlertaCL
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_ENTITLEMENTS: AlertaCL/AlertaCL.entitlements
+        INFOPLIST_FILE: AlertaCL/Info.plist
+    info:
+      path: AlertaCL/Info.plist
+      properties:
+        CFBundleDisplayName: AlertaCL
+        UIBackgroundModes:
+          - fetch
+          - remote-notification
+        NSLocationWhenInUseUsageDescription: "AlertaCL usa tu ubicación para estimar intensidad local y mostrar sismos cercanos."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "AlertaCL puede avisar sismos cercanos aunque la app esté en segundo plano."
+        UILaunchScreen: {}
+schemes:
+  AlertaCL:
+    build:
+      targets:
+        AlertaCL: all
+    run:
+      config: Debug
+    archive:
+      config: Release

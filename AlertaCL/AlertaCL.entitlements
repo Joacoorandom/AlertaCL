@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<!--
+	  Critical Alerts requiere aprobación de Apple:
+	  com.apple.developer.usernotifications.critical-alerts
+	  Sin ese entitlement (App Store / perfil firmado), iOS degrada a
+	  notificaciones time-sensitive / normales. Sideloadly no puede
+	  otorgar Critical Alerts reales.
+	-->
+</dict>
+</plist>
