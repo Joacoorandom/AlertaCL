@@ -16,13 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26
+      - name: Select Xcode
         run: |
           set -euo pipefail
           echo "Available Xcodes:"
           ls /Applications | grep -i xcode || true
-          xcodebuild -version || true
-          # Prefer Xcode 26 if present; otherwise newest.
           CANDIDATES=(
             "/Applications/Xcode-26.app"
             "/Applications/Xcode_26.app"
@@ -42,9 +40,9 @@ jobs:
           echo "Using $SELECTED"
           sudo xcode-select -s "$SELECTED/Contents/Developer"
           xcodebuild -version
-          # Fail early if SDK < 26 (Liquid Glass)
+          xcodebuild -showsdks || true
           if ! xcodebuild -showsdks | grep -q "iphoneos26"; then
-            echo "::warning::iphoneos26 SDK no encontrado. El runner puede no tener Xcode 26 aún. Intentando build de todos modos."
+            echo "::warning::iphoneos26 SDK no encontrado en este runner."
           fi
 
       - name: Install XcodeGen
@@ -57,17 +55,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build
+          set -o pipefail
           xcodebuild \
-            -project AlertaCL.xcodeproj \
-            -scheme AlertaCL \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            build | xcpretty || xcodebuild \
             -project AlertaCL.xcodeproj \
             -scheme AlertaCL \
             -configuration Release \
@@ -91,27 +80,28 @@ jobs:
           path: dist/AlertaCL-unsigned.ipa
           if-no-files-found: error
 
-      - name: Publish GitHub Release (tags / manual)
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: AlertaCL ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'sideload' }}
+          name: AlertaCL sideload IPA
           body: |
             ## AlertaCL — IPA sin firmar
 
             1. Descarga `AlertaCL-unsigned.ipa`
-            2. Ábrelo en **Sideloadly** (Windows/macOS)
+            2. Ábrelo en **Sideloadly**
             3. Conectá tu iPhone e iniciá sesión con tu Apple ID
             4. Install
 
-            **Nota:** Critical Alerts de Apple no aplican en sideload sin entitlement aprobado.
-            iOS 26+ recomendado (Liquid Glass).
-
             Página con QR: https://joacoorandom.github.io/AlertaCL/
+
+            **Nota:** Critical Alerts de Apple no aplican en sideload sin entitlement.
+            iOS 26+ recomendado (Liquid Glass).
           files: dist/AlertaCL-unsigned.ipa
           draft: false
           generate_release_notes: true
+          make_latest: true
 
   pages:
     needs: build
@@ -128,66 +118,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Generate download page + QR
-        run: |
-          set -euo pipefail
-          REPO="${{ github.repository }}"
-          # Latest release asset URL (fallback to artifact instructions)
-          IPA_URL="https://github.com/${REPO}/releases/latest/download/AlertaCL-unsigned.ipa"
-          RELEASES_URL="https://github.com/${REPO}/releases/latest"
-          mkdir -p public
-          python3 - << PY
-          import urllib.request, urllib.parse, pathlib
-          ipa = "${IPA_URL}"
-          releases = "${RELEASES_URL}"
-          qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=" + urllib.parse.quote(ipa)
-          img = urllib.request.urlopen(qr_url).read()
-          pathlib.Path("public/qr-ipa.png").write_bytes(img)
-          html = f'''<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AlertaCL — Descargar IPA</title>
-<style>
-  :root {{ --bg:#0b1524; --fg:#f4f7fb; --accent:#e23; --muted:#9bb; }}
-  * {{ box-sizing:border-box; }}
-  body {{ margin:0; font-family: ui-rounded, "SF Pro Display", system-ui, sans-serif;
-    background: radial-gradient(1200px 600px at 80% -10%, #3a1520, transparent),
-                radial-gradient(900px 500px at -10% 20%, #16304a, transparent), var(--bg);
-    color: var(--fg); min-height:100vh; display:grid; place-items:center; padding:24px; }}
-  main {{ max-width:420px; width:100%; text-align:center; }}
-  h1 {{ font-size:2.4rem; letter-spacing:-.03em; margin:0 0 .4rem; }}
-  p {{ color:var(--muted); line-height:1.5; }}
-  img.qr {{ width:280px; height:280px; border-radius:24px; background:#fff; padding:16px; margin:20px 0; }}
-  a.btn {{ display:inline-block; margin:.4rem; padding:14px 22px; border-radius:999px;
-    background:linear-gradient(135deg,#e23,#c40); color:#fff; text-decoration:none; font-weight:700; }}
-  a.ghost {{ background:transparent; border:1px solid #456; color:var(--fg); }}
-  ol {{ text-align:left; color:var(--muted); }}
-</style>
-</head>
-<body>
-<main>
-  <h1>AlertaCL</h1>
-  <p>Alertas sísmicas para Chile · IPA sin firmar para Sideloadly</p>
-  <img class="qr" src="qr-ipa.png" alt="QR descarga IPA"/>
-  <p>Escaneá el QR o tocá descargar</p>
-  <p>
-    <a class="btn" href="{ipa}">Descargar IPA</a>
-    <a class="btn ghost" href="{releases}">Releases</a>
-  </p>
-  <ol>
-    <li>Descargá el IPA en una PC</li>
-    <li>Abrí Sideloadly e iniciá sesión con tu Apple ID</li>
-    <li>Conectá el iPhone e instalá</li>
-    <li>En iOS: Ajustes → General → VPN y gestión de dispositivos → confiar</li>
-  </ol>
-  <p style="font-size:.85rem">Requiere iOS 26+ (Liquid Glass). Critical Alerts de Apple no aplican en sideload.</p>
-</main>
-</body>
-</html>'''
-          pathlib.Path("public/index.html").write_text(html, encoding="utf-8")
-          print("page ready", ipa)
-          PY
+        run: python3 scripts/generate-download-page.py --repo "${{ github.repository }}"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
